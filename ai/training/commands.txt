@@ -1,0 +1,34 @@
+TCSH Venv:
+source .venv/bin/activate.csh
+
+Cap Threads:
+setenv OMP_NUM_THREADS 4
+setenv MKL_NUM_THREADS 4
+
+Trainer:
+python -u -m ai.training.trainer --model-path data/model.pt --transition-dir data/transitions/ --gaddag-path data/gaddag.pkl --log data/training_logs/training_log.csv
+
+Workers:
+python -u -m ai.training.self_play --worker-id 0 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 1 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 2 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 3 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 4 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 5 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 6 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 7 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 8 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 9 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+python -u -m ai.training.self_play --worker-id 10 --model-path data/model.pt --gaddag-path data/gaddag.pkl --output-dir data/transitions/ --n-games 999999 --opponent greedy
+
+Start Workers:
+bash start_workers.sh
+
+Check Workers:
+bash -c 'for i in $(seq 0 15); do echo "=== Worker $i ==="; tail -n 1 data/worker_logs/worker_$i.log; done'
+
+Kill Workers:
+pkill -u $USER -f self_play
+
+Plot Evals:
+python data/analysis/plot_live.py

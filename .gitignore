@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Data / large files
+data/gaddag.pkl
+
+# OS
+.DS_Store
+
+# Misc
+data/training_logs/training_log.csv
+
+# Training outputs
+data/worker_logs/
+data/transitions/

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrabble AI</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #111a11;
+  color: #e8e0d0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  background: #0a120a;
+  border-bottom: 1px solid #1e3a1e;
+  flex-shrink: 0;
+}
+header h1 {
+  font-size: 1.1rem;
+  letter-spacing: 4px;
+  color: #c8b44a;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.dir-pill {
+  background: #1e3a1e;
+  border: 1px solid #c8b44a;
+  color: #c8b44a;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.dir-pill:hover { background: #2a4e2a; }
+
+/* ── Layout ── */
+main {
+  display: flex;
+  gap: 18px;
+  padding: 16px 20px;
+  flex: 1;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+/* ── Board ── */
+#boardContainer {
+  display: inline-grid;
+  grid-template-columns: 18px repeat(15, 36px);
+  grid-template-rows: 18px repeat(15, 36px);
+  gap: 1px;
+  background: #0a120a;
+  border: 2px solid #0a120a;
+  flex-shrink: 0;
+}
+
+.board-lbl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #3a5a3a;
+  background: #111a11;
+  user-select: none;
+}
+.board-lbl-row { justify-content: flex-end; padding-right: 2px; }
+
+.cell {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  background: #3a6a48;
+  user-select: none;
+  transition: filter 0.08s;
+}
+.cell:hover { filter: brightness(1.18); }
+
+/* Premium squares */
+.cell.TW { background: #aa1e1e; }
+.cell.DW { background: #b06828; }
+.cell.TL { background: #154088; }
+.cell.DL { background: #2080b8; }
+
+.prem-lbl {
+  font-size: 7px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.3px;
+  text-align: center;
+  line-height: 1;
+  pointer-events: none;
+}
+.star { font-size: 16px; color: rgba(255,255,255,0.6); pointer-events: none; }
+
+/* Placed tiles */
+.cell.has-tile {
+  background: #eee0b8 !important;
+  filter: none !important;
+}
+.cell.has-tile:hover { filter: brightness(0.94) !important; }
+.cell.blank-tile { background: #ddd0a0 !important; }
+
+.tile-letter {
+  font-size: 17px;
+  font-weight: 900;
+  color: #1a0800;
+  line-height: 1;
+  pointer-events: none;
+}
+.tile-letter.blank { font-size: 15px; color: #3a2000; }
+.tile-val {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 7px;
+  font-weight: 700;
+  color: #5a3010;
+  pointer-events: none;
+}
+
+/* Selection */
+.cell.selected {
+  outline: 3px solid #f0c800;
+  outline-offset: -2px;
+  z-index: 2;
+}
+.dir-arrow {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  font-size: 9px;
+  color: #f0c800;
+  pointer-events: none;
+  z-index: 3;
+  line-height: 1;
+}
+
+/* Preview */
+.cell.preview {
+  background: rgba(240, 200, 0, 0.45) !important;
+  filter: none !important;
+}
+.cell.preview .tile-letter { color: #3a2000; }
+
+/* ── Right panel ── */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 280px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.sec-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #6a9a6a;
+  margin-bottom: 5px;
+}
+
+.rack-row { display: flex; gap: 6px; align-items: center; }
+
+#rackInput {
+  background: #0a120a;
+  border: 1px solid #2a4a2a;
+  border-radius: 4px;
+  color: #e8e0d0;
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  width: 195px;
+  outline: none;
+}
+#rackInput:focus { border-color: #c8b44a; }
+
+.btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: filter 0.1s;
+}
+.btn:hover  { filter: brightness(1.15); }
+.btn:active { filter: brightness(0.88); }
+.btn-blank   { background: #2a3a5a; color: #a0b8e0; font-size: 12px; padding: 7px 10px; }
+.btn-blank.on { background: #c8b44a; color: #1a0800; }
+.btn-gen   { background: #2a7a40; color: #fff; width: 100%; font-size: 14px; padding: 10px; }
+.btn-clear { background: #7a2020; color: #fff; width: 100%; font-size: 13px; padding: 8px; }
+
+.status { font-size: 12px; color: #6a9a6a; min-height: 16px; }
+
+/* Moves list */
+.moves-wrap {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+#movesList {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #1e3a1e;
+  border-radius: 4px;
+  background: #0a120a;
+  max-height: 420px;
+}
+#movesList::-webkit-scrollbar { width: 5px; }
+#movesList::-webkit-scrollbar-track { background: #0a120a; }
+#movesList::-webkit-scrollbar-thumb { background: #2a4a2a; border-radius: 3px; }
+
+.move-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  gap: 7px;
+  cursor: pointer;
+  border-bottom: 1px solid #111a11;
+  transition: background 0.08s;
+}
+.move-item:hover { background: #1a2e1a; }
+.move-item:last-child { border-bottom: none; }
+
+.move-rank { width: 22px; text-align: right; font-size: 10px; color: #4a6a4a; flex-shrink: 0; }
+.move-word { font-family: 'Courier New', monospace; font-weight: 700; font-size: 14px; flex: 1; color: #ddd0a0; }
+.move-score { font-weight: 700; font-size: 14px; color: #c8b44a; flex-shrink: 0; min-width: 28px; text-align: right; }
+.move-score.bingo { color: #e07830; }
+.move-meta { font-size: 10px; color: #4a6a4a; flex-shrink: 0; }
+.move-equity { font-size: 10px; color: #6a9a6a; flex-shrink: 0; min-width: 36px; text-align: right; }
+.move-equity.neg { color: #9a5a5a; }
+
+.hint {
+  font-size: 10px;
+  color: #3a5a3a;
+  line-height: 1.7;
+  border-top: 1px solid #1e3a1e;
+  padding-top: 10px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Scrabble AI</h1>
+  <div class="dir-pill" id="dirPill" onclick="toggleDir()">→ H</div>
+</header>
+
+<main>
+  <div id="boardContainer"></div>
+
+  <div class="panel">
+    <div>
+      <div class="sec-label">Rack</div>
+      <div class="rack-row">
+        <input id="rackInput" type="text" maxlength="7" placeholder="LETTERS" autocomplete="off" spellcheck="false">
+        <button class="btn btn-blank" id="blankBtn" onclick="toggleBlank()">Blank</button>
+      </div>
+    </div>
+
+    <button class="btn btn-gen" onclick="generate()">Generate Moves</button>
+    <button class="btn btn-clear" onclick="clearBoard()">Clear Board</button>
+
+    <div class="status" id="status"></div>
+
+    <div class="moves-wrap">
+      <div class="sec-label">Moves</div>
+      <div id="movesList"></div>
+    </div>
+
+    <div class="hint">
+      Click to select &nbsp;·&nbsp; Type to place &nbsp;·&nbsp; Shift+letter = blank tile<br>
+      Double-click or Tab to flip direction &nbsp;·&nbsp; Backspace to delete<br>
+      Arrow keys to navigate &nbsp;·&nbsp; Esc to deselect<br>
+      Hover move to preview &nbsp;·&nbsp; Click move to place
+    </div>
+  </div>
+</main>
+
+<div id="prem-data" data-prem='{{ premium_map | safe }}' style="display:none"></div>
+<div id="vals-data" data-vals='{{ letter_values | safe }}' style="display:none"></div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const SIZE = 15;
+const VALS = JSON.parse(document.getElementById('vals-data').dataset.vals);
+
+const PREM = JSON.parse(document.getElementById('prem-data').dataset.prem);
+
+// ── State ────────────────────────────────────────────────────────────────────
+let board     = Array.from({length:SIZE}, () => Array(SIZE).fill(null));
+let sel       = null;    // {r, c}
+let dir       = 'H';
+let blankMode = false;
+let moves     = [];
+let hovered   = -1;
+
+// ── DOM cache ────────────────────────────────────────────────────────────────
+const cells = Array.from({length:SIZE}, () => Array(SIZE).fill(null));
+
+// ── Build DOM ────────────────────────────────────────────────────────────────
+function buildBoard() {
+  const con = document.getElementById('boardContainer');
+  con.innerHTML = '';
+
+  // corner
+  const corner = document.createElement('div');
+  corner.className = 'board-lbl';
+  con.appendChild(corner);
+
+  // col headers
+  for (let c = 0; c < SIZE; c++) {
+    const d = document.createElement('div');
+    d.className = 'board-lbl';
+    d.textContent = c;
+    con.appendChild(d);
+  }
+
+  // rows
+  for (let r = 0; r < SIZE; r++) {
+    const rl = document.createElement('div');
+    rl.className = 'board-lbl board-lbl-row';
+    rl.textContent = r;
+    con.appendChild(rl);
+
+    for (let c = 0; c < SIZE; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const p = PREM[r*15+c];
+      if (p) cell.classList.add(p);
+
+      cell.addEventListener('click', () => onCellClick(r, c));
+      cell.addEventListener('dblclick', e => { e.preventDefault(); toggleDir(); });
+
+      cells[r][c] = cell;
+      con.appendChild(cell);
+    }
+  }
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function previewMap() {
+  const pm = new Map();
+  if (hovered < 0 || hovered >= moves.length) return pm;
+  const { word, pos, direction: d } = moves[hovered];
+  const ln = word.length;
+  for (let i = 0; i < ln; i++) {
+    const r = d === 'H' ? pos[0]            : pos[0] - ln + 1 + i;
+    const c = d === 'H' ? pos[1] - ln + 1 + i : pos[1];
+    if (r >= 0 && r < SIZE && c >= 0 && c < SIZE && !board[r][c])
+      pm.set(r*15+c, word[i]);
+  }
+  return pm;
+}
+
+function premContent(r, c) {
+  if (r === 7 && c === 7) return '<span class="star">★</span>';
+  const p = PREM[r*15+c];
+  if (!p) return '';
+  return `<span class="prem-lbl">${p}</span>`;
+}
+
+function render() {
+  document.getElementById('dirPill').textContent = dir === 'H' ? '→ H' : '↓ V';
+  document.getElementById('blankBtn').classList.toggle('on', blankMode);
+
+  const pm = previewMap();
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const cell = cells[r][c];
+      const tile = board[r][c];
+      const isSel = sel && sel.r === r && sel.c === c;
+      const prevLetter = pm.get(r*15+c);
+
+      // reset classes
+      const p = PREM[r*15+c];
+      cell.className = 'cell' + (p ? ' ' + p : '');
+
+      if (tile) {
+        cell.classList.add('has-tile');
+        if (tile.isBlank) cell.classList.add('blank-tile');
+        const disp = tile.isBlank ? tile.letter.toLowerCase() : tile.letter;
+        const valHtml = tile.isBlank ? '' : `<span class="tile-val">${VALS[tile.letter] ?? ''}</span>`;
+        cell.innerHTML = `<span class="tile-letter${tile.isBlank ? ' blank' : ''}">${disp}</span>${valHtml}`;
+      } else if (prevLetter !== undefined) {
+        cell.classList.add('preview');
+        cell.innerHTML = `<span class="tile-letter">${prevLetter}</span>`;
+      } else {
+        cell.innerHTML = premContent(r, c);
+      }
+
+      if (isSel) {
+        cell.classList.add('selected');
+        if (!tile) {
+          cell.insertAdjacentHTML('beforeend',
+            `<div class="dir-arrow">${dir === 'H' ? '→' : '↓'}</div>`);
+        }
+      }
+    }
+  }
+}
+
+// ── Interaction ───────────────────────────────────────────────────────────────
+function onCellClick(r, c) {
+  sel = {r, c};
+  render();
+}
+
+function toggleDir() {
+  dir = dir === 'H' ? 'V' : 'H';
+  render();
+}
+
+function toggleBlank() {
+  blankMode = !blankMode;
+  render();
+}
+
+function advance() {
+  if (dir === 'H' && sel.c < SIZE-1) sel = {r: sel.r, c: sel.c+1};
+  else if (dir === 'V' && sel.r < SIZE-1) sel = {r: sel.r+1, c: sel.c};
+}
+
+function retreat() {
+  if (dir === 'H' && sel.c > 0) sel = {r: sel.r, c: sel.c-1};
+  else if (dir === 'V' && sel.r > 0) sel = {r: sel.r-1, c: sel.c};
+}
+
+document.addEventListener('keydown', e => {
+  if (document.activeElement === document.getElementById('rackInput')) return;
+  if (!sel) return;
+
+  const k = e.key;
+
+  if (k === 'Escape')     { e.preventDefault(); sel = null; render(); return; }
+  if (k === 'Tab')        { e.preventDefault(); toggleDir(); return; }
+  if (k === 'ArrowRight') { e.preventDefault(); if (sel.c < SIZE-1) { sel = {r:sel.r, c:sel.c+1}; render(); } return; }
+  if (k === 'ArrowLeft')  { e.preventDefault(); if (sel.c > 0)      { sel = {r:sel.r, c:sel.c-1}; render(); } return; }
+  if (k === 'ArrowDown')  { e.preventDefault(); if (sel.r < SIZE-1) { sel = {r:sel.r+1, c:sel.c}; render(); } return; }
+  if (k === 'ArrowUp')    { e.preventDefault(); if (sel.r > 0)      { sel = {r:sel.r-1, c:sel.c}; render(); } return; }
+
+  if (k === 'Delete' || k === 'Backspace') {
+    e.preventDefault();
+    if (k === 'Backspace' && !board[sel.r][sel.c]) retreat();
+    board[sel.r][sel.c] = null;
+    render();
+    return;
+  }
+
+  if (k.length === 1 && k.match(/[a-zA-Z]/)) {
+    e.preventDefault();
+    const letter  = k.toUpperCase();
+    const isBlank = blankMode || e.shiftKey;
+    board[sel.r][sel.c] = {letter, isBlank};
+    if (isBlank) blankMode = false;
+    advance();
+    render();
+  }
+});
+
+// ── Move generation ───────────────────────────────────────────────────────────
+async function generate() {
+  const rackStr = document.getElementById('rackInput').value.toUpperCase().replace(/[^A-Z?]/g, '');
+  const rack    = rackStr.split('').filter(Boolean);
+
+  const tiles = [];
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
+      if (board[r][c])
+        tiles.push({row:r, col:c, letter:board[r][c].letter, is_blank:board[r][c].isBlank});
+
+  const status   = document.getElementById('status');
+  const movesList = document.getElementById('movesList');
+  status.textContent  = 'Generating…';
+  movesList.innerHTML = '';
+  moves   = [];
+  hovered = -1;
+  render();
+
+  try {
+    const resp = await fetch('/generate', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({board: tiles, rack}),
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    moves = await resp.json();
+    status.textContent = `${moves.length} move${moves.length !== 1 ? 's' : ''} found`;
+    renderMoves();
+  } catch (err) {
+    status.textContent = `Error: ${err.message}`;
+  }
+}
+
+function renderMoves() {
+  const list = document.getElementById('movesList');
+  list.innerHTML = '';
+
+  if (moves.length === 0) {
+    list.innerHTML = '<div style="padding:12px;color:#4a6a4a;font-size:12px;">No moves found.</div>';
+    return;
+  }
+
+  moves.forEach((m, i) => {
+    const item = document.createElement('div');
+    item.className = 'move-item';
+
+    const startR = m.direction === 'H' ? m.pos[0] : m.pos[0] - m.word.length + 1;
+    const startC = m.direction === 'H' ? m.pos[1] - m.word.length + 1 : m.pos[1];
+    const meta   = `${m.direction} ${startR},${startC}`;
+
+    const eq = m.equity != null
+      ? `<span class="move-equity${m.equity < 0 ? ' neg' : ''}">${m.equity > 0 ? '+' : ''}${m.equity}</span>`
+      : '';
+    item.innerHTML = `
+      <span class="move-rank">${i+1}</span>
+      <span class="move-word">${m.word}</span>
+      <span class="move-score${m.bingo ? ' bingo' : ''}">${m.score}</span>
+      ${eq}
+      <span class="move-meta">${meta}</span>
+    `;
+
+    item.addEventListener('mouseenter', () => { hovered = i;  render(); });
+    item.addEventListener('mouseleave', () => { hovered = -1; render(); });
+    item.addEventListener('click', () => placeMove(m));
+    list.appendChild(item);
+  });
+}
+
+function placeMove(m) {
+  const {word, pos, direction: d} = m;
+  const ln = word.length;
+  for (let i = 0; i < ln; i++) {
+    const r = d === 'H' ? pos[0]            : pos[0] - ln + 1 + i;
+    const c = d === 'H' ? pos[1] - ln + 1 + i : pos[1];
+    if (r >= 0 && r < SIZE && c >= 0 && c < SIZE && !board[r][c]) {
+      const isBlank = word[i] === word[i].toLowerCase();
+      board[r][c] = {letter: word[i].toUpperCase(), isBlank};
+    }
+  }
+  moves   = [];
+  hovered = -1;
+  document.getElementById('movesList').innerHTML = '';
+  document.getElementById('status').textContent  = 'Move placed. Update rack and generate again.';
+  render();
+}
+
+function clearBoard() {
+  board   = Array.from({length:SIZE}, () => Array(SIZE).fill(null));
+  moves   = [];
+  hovered = -1;
+  sel     = null;
+  document.getElementById('movesList').innerHTML = '';
+  document.getElementById('status').textContent  = '';
+  render();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+buildBoard();
+render();
+</script>
+</body>
+</html>
